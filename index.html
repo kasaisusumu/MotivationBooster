@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motion Gated Player - Hybrid Edition</title>
+    <title>Motion Gated Player - v7 Complete</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --bg-color: #0a0a0a;
             --panel-color: #161616;
-            --accent-color: #00e5ff; /* サイバーブルーに変更 */
+            --accent-color: #00e5ff;
             --active-color: #00ff88;
             --stop-color: #ff0055;
+            --warn-color: #ff9800;
             --text-color: #e0e0e0;
         }
 
@@ -27,7 +28,6 @@
             min-height: 100vh;
         }
 
-        /* --- ヘッダー --- */
         header {
             width: 100%;
             padding: 15px 0;
@@ -37,7 +37,6 @@
         }
         h1 { margin: 0; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-color); text-shadow: 0 0 10px rgba(0,229,255,0.3); }
 
-        /* --- メインコンテナ --- */
         .main-container {
             width: 95%;
             max-width: 900px;
@@ -47,7 +46,7 @@
             padding-bottom: 50px;
         }
 
-        /* --- 状態インジケータ --- */
+        /* ステータスバー */
         .status-bar {
             display: flex;
             align-items: center;
@@ -65,12 +64,13 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            min-width: 100px;
+            min-width: 130px;
         }
         .status-active { color: var(--active-color); text-shadow: 0 0 8px var(--active-color); }
         .status-inactive { color: var(--stop-color); text-shadow: 0 0 8px var(--stop-color); }
+        .status-manual { color: var(--warn-color); }
 
-        /* --- メーターUI --- */
+        /* メーター */
         .meter-wrapper {
             flex-grow: 1;
             margin-left: 20px;
@@ -98,7 +98,7 @@
         }
         .meter-hidden { opacity: 0; pointer-events: none; }
 
-        /* --- プレイヤー --- */
+        /* プレイヤー */
         .player-frame {
             position: relative;
             width: 100%;
@@ -114,7 +114,7 @@
             top: 0; left: 0; width: 100%; height: 100%;
         }
 
-        /* --- コントロールパネル --- */
+        /* コントロールパネル */
         .control-panel {
             background: var(--panel-color);
             padding: 20px;
@@ -130,14 +130,40 @@
             align-items: center;
         }
         
-        /* 入力フォーム */
+        /* スイッチ群 */
+        .toggles-area {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 15px;
+        }
+
+        /* Toggle UI */
+        .toggle-container {
+            display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
+            background: #222; padding: 8px 12px; border-radius: 20px; border: 1px solid #444;
+        }
+        .toggle-checkbox { display: none; }
+        .toggle-switch {
+            width: 36px; height: 18px; background: #555; border-radius: 20px; position: relative; transition: 0.3s;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: #fff; border-radius: 50%; transition: 0.3s;
+        }
+        .toggle-checkbox:checked + .toggle-switch { background: var(--accent-color); }
+        .toggle-checkbox:checked + .toggle-switch::after { transform: translateX(18px); }
+        .toggle-label { font-size: 0.85rem; color: #ccc; }
+
+        /* Input & Buttons */
         .input-group { flex: 1; display: flex; gap: 10px; }
         input[type="text"] {
             flex: 1; background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 8px; outline: none;
         }
         input[type="text"]:focus { border-color: var(--accent-color); }
 
-        /* ボタン */
         button {
             background: #333; color: #fff; border: 1px solid #444; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;
         }
@@ -153,28 +179,10 @@
         }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
 
-        /* トグルスイッチ */
-        .toggle-container {
-            display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
-            background: #222; padding: 8px 15px; border-radius: 20px; border: 1px solid #444;
-        }
-        .toggle-checkbox { display: none; }
-        .toggle-switch {
-            width: 40px; height: 20px; background: #555; border-radius: 20px; position: relative; transition: 0.3s;
-        }
-        .toggle-switch::after {
-            content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.3s;
-        }
-        .toggle-checkbox:checked + .toggle-switch { background: var(--accent-color); }
-        .toggle-checkbox:checked + .toggle-switch::after { transform: translateX(20px); }
-        .toggle-label { font-size: 0.9rem; color: #ccc; }
-
-        /* スライダー周り */
         .slider-group { flex: 1; min-width: 200px; }
         .slider-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; color: #aaa; }
         input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--accent-color); }
 
-        /* プリセットタグ */
         .preset-tags { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
         .tag {
             font-size: 0.8rem; padding: 5px 12px; background: #333; border-radius: 20px; cursor: pointer; white-space: nowrap; border: 1px solid transparent;
@@ -187,7 +195,7 @@
 <body>
 
     <header>
-        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v6</h1>
+        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v7</h1>
     </header>
 
     <div class="main-container">
@@ -210,7 +218,9 @@
             </div>
 
             <div style="margin-left: 10px;">
-                <button onclick="toggleMeter()" style="padding: 5px 10px;" title="メーター表示切替"><i class="fas fa-eye"></i></button>
+                <button onclick="toggleMeter()" style="padding: 8px 12px;" title="メーター表示切替">
+                    <i id="meterIcon" class="fas fa-eye"></i>
+                </button>
             </div>
         </div>
 
@@ -219,11 +229,18 @@
         </div>
 
         <div class="control-panel">
-            <div class="panel-row" style="justify-content: center; padding-bottom: 15px; border-bottom: 1px solid #333;">
-                <label class="toggle-container" title="ONにすると、マウス移動やキーボード入力も「動き」として検知します">
+            
+            <div class="toggles-area">
+                <label class="toggle-container" title="OFFにすると動き検知を無視します（普通のプレイヤーになります）">
+                    <input type="checkbox" id="detectionToggle" class="toggle-checkbox" checked>
+                    <div class="toggle-switch"></div>
+                    <span class="toggle-label">動き検知 ON</span>
+                </label>
+
+                <label class="toggle-container" title="マウスやキーボード操作も動きとしてカウントします">
                     <input type="checkbox" id="pcInputToggle" class="toggle-checkbox" checked>
                     <div class="toggle-switch"></div>
-                    <span class="toggle-label"><i class="fas fa-keyboard"></i> PC操作も検知に含める (作業用)</span>
+                    <span class="toggle-label">PC操作検知</span>
                 </label>
             </div>
 
@@ -248,7 +265,7 @@
 
             <div class="panel-row">
                 <div class="slider-group">
-                    <div class="slider-label"><span>カメラ感度 (高⇔低)</span> <span id="sensVal">50</span></div>
+                    <div class="slider-label"><span>カメラ感度</span> <span id="sensVal">50</span></div>
                     <input type="range" id="sensitivity" min="10" max="150" value="50">
                 </div>
                 <div class="slider-group">
@@ -265,7 +282,7 @@
     </div>
 
     <script>
-        // --- YouTube API ---
+        // --- YouTube API Setup ---
         let player;
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
@@ -276,16 +293,49 @@
             player = new YT.Player('player', {
                 videoId: 'jfKfPfyJRdk',
                 playerVars: { 'playsinline': 1, 'rel': 0 },
+                events: {
+                    'onStateChange': onPlayerStateChange // 状態変化を監視
+                }
             });
         }
 
+        // --- 手動停止管理ロジック ---
+        let isManuallyPaused = false; // ユーザーが手動で止めたか
+        let isSystemAction = false;   // システムが止めたか
+
+        function onPlayerStateChange(event) {
+            // 一時停止された時
+            if (event.data === YT.PlayerState.PAUSED) {
+                if (!isSystemAction) {
+                    // システムがやったのでなければ、ユーザーの手動停止とみなす
+                    isManuallyPaused = true;
+                    updateStatusDisplay("MANUAL PAUSE");
+                }
+                isSystemAction = false; // フラグリセット
+            }
+            // 再生された時
+            if (event.data === YT.PlayerState.PLAYING) {
+                // ユーザーが再生ボタンを押した、またはシステムが再生した
+                // いずれにせよ手動停止フラグは解除する
+                isManuallyPaused = false;
+                isSystemAction = false;
+            }
+        }
+
+        // --- 動画操作系 ---
         function loadFromUrl() {
             const url = document.getElementById('videoUrl').value;
             let vid = extractVideoID(url);
-            if(vid && player && player.loadVideoById) player.loadVideoById(vid);
+            if(vid && player && player.loadVideoById) {
+                player.loadVideoById(vid);
+                isManuallyPaused = false; // 動画変更時はリセット
+            }
         }
         function setVideo(id) {
-            if(player && player.loadVideoById) player.loadVideoById(id);
+            if(player && player.loadVideoById) {
+                player.loadVideoById(id);
+                isManuallyPaused = false;
+            }
             document.getElementById('videoUrl').value = "https://youtu.be/" + id;
         }
         function openYouTubeSearch() { window.open("https://www.youtube.com", "_blank"); }
@@ -295,17 +345,18 @@
             return url.length === 11 ? url : null;
         }
 
-        // --- Logic ---
+        // --- メイン処理 ---
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('diff-canvas');
         const ctx = canvas.getContext('2d');
         
-        // UI Elements
+        // UI
         const startBtn = document.getElementById('startBtn');
         const statusIndicator = document.getElementById('statusIndicator');
         const motionBar = document.getElementById('motionBar');
         const meterValue = document.getElementById('meterValue');
         const meterWrapper = document.getElementById('meterWrapper');
+        const meterIcon = document.getElementById('meterIcon');
         
         // Settings
         const sensInput = document.getElementById('sensitivity');
@@ -313,6 +364,7 @@
         const sensValDisp = document.getElementById('sensVal');
         const decayValDisp = document.getElementById('decayVal');
         const pcInputToggle = document.getElementById('pcInputToggle');
+        const detectionToggle = document.getElementById('detectionToggle');
 
         sensInput.addEventListener('input', (e) => sensValDisp.innerText = e.target.value);
         decayInput.addEventListener('input', (e) => decayValDisp.innerText = e.target.value + "s");
@@ -322,24 +374,39 @@
         let isRunning = false;
         let currentState = "STOPPED"; 
         let isMeterVisible = true;
-        let pcInputDetectedFrame = false; // 今のフレームでPC操作があったか
+        let pcInputDetectedFrame = false;
 
-        // --- PC Input Listeners ---
+        // PC操作監視
         function onPcInput() {
-            if (!isRunning || !pcInputToggle.checked) return;
+            if (!isRunning || !pcInputToggle.checked || !detectionToggle.checked) return;
             lastActiveTime = Date.now();
             pcInputDetectedFrame = true;
         }
-        // マウス移動とキー操作を監視
-        document.addEventListener('mousemove', onPcInput);
-        document.addEventListener('keydown', onPcInput);
-        document.addEventListener('click', onPcInput);
-        document.addEventListener('scroll', onPcInput);
+        ['mousemove', 'keydown', 'click', 'scroll'].forEach(ev => document.addEventListener(ev, onPcInput));
 
-
+        // メーター表示切替（アイコン変化）
         function toggleMeter() {
             isMeterVisible = !isMeterVisible;
-            meterWrapper.classList.toggle('meter-hidden', !isMeterVisible);
+            if(isMeterVisible) {
+                meterWrapper.classList.remove('meter-hidden');
+                meterIcon.className = "fas fa-eye"; // 開いた目
+            } else {
+                meterWrapper.classList.add('meter-hidden');
+                meterIcon.className = "fas fa-eye-slash"; // 斜線の目
+            }
+        }
+
+        function updateStatusDisplay(state) {
+            if (state === "PLAYING") {
+                statusIndicator.innerHTML = '<i class="fas fa-play"></i> <span>ACTIVE</span>';
+                statusIndicator.className = "status-text status-active";
+            } else if (state === "STOPPED") {
+                statusIndicator.innerHTML = '<i class="fas fa-pause"></i> <span>STOP</span>';
+                statusIndicator.className = "status-text status-inactive";
+            } else if (state === "MANUAL PAUSE") {
+                statusIndicator.innerHTML = '<i class="fas fa-hand-paper"></i> <span>MANUAL</span>';
+                statusIndicator.className = "status-text status-manual";
+            }
         }
 
         startBtn.addEventListener('click', async () => {
@@ -357,16 +424,15 @@
                 isRunning = true;
                 loop();
             } catch(e) {
-                alert("カメラの起動に失敗しました。");
+                alert("カメラ起動エラー");
             }
         });
 
         function loop() {
             if(!isRunning) return;
 
+            // 1. 動き検知（カメラ）
             let score = 0;
-
-            // 1. カメラ処理
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -382,44 +448,71 @@
                 lastImageData = frame;
             }
 
-            // 2. カメラ検知判定
-            const threshold = parseInt(sensInput.value);
-            if (score > (threshold / 2)) {
-                lastActiveTime = Date.now();
+            // 2. 検知がONの場合のみ時間を更新
+            if (detectionToggle.checked) {
+                const threshold = parseInt(sensInput.value);
+                if (score > (threshold / 2)) {
+                    lastActiveTime = Date.now();
+                }
             }
 
-            // 3. メーター表示の計算 (PC操作があれば強制MAX)
+            // 3. メーター更新
             let displayScore = Math.min(100, score / 3);
             if (pcInputDetectedFrame) {
-                displayScore = 100; // PC操作時はメーター振り切れ
-                pcInputDetectedFrame = false; // フラグリセット
+                displayScore = 100;
+                pcInputDetectedFrame = false;
             }
-
             if (isMeterVisible) {
                 motionBar.style.width = displayScore + "%";
                 meterValue.innerText = Math.floor(displayScore) + "%";
-                // メーターの色変化
                 if(displayScore > 80) motionBar.style.background = "var(--active-color)";
                 else motionBar.style.background = "linear-gradient(90deg, var(--accent-color), #fff)";
             }
 
-            // 4. 再生/停止判定
+            // 4. 再生制御ロジック
             const now = Date.now();
             const decayMs = parseFloat(decayInput.value) * 1000;
-            
+
+            // 手動停止中は、何があっても再生しない
+            if (isManuallyPaused) {
+                if (currentState !== "MANUAL PAUSE") {
+                    currentState = "MANUAL PAUSE";
+                    updateStatusDisplay("MANUAL PAUSE");
+                }
+                requestAnimationFrame(loop);
+                return;
+            }
+
+            // 検知OFFなら何もしない（ユーザーが自由に再生/停止できる状態を維持）
+            if (!detectionToggle.checked) {
+                 // UIだけリセットしておく
+                 if (currentState !== "STOPPED" && currentState !== "PLAYING") {
+                     updateStatusDisplay("STOPPED"); 
+                 }
+                 requestAnimationFrame(loop);
+                 return;
+            }
+
+            // 自動制御
             if (now < lastActiveTime + decayMs) {
+                // --- PLAY ---
                 if (currentState !== "PLAYING") {
                     currentState = "PLAYING";
-                    statusIndicator.innerHTML = '<i class="fas fa-play"></i> <span>ACTIVE</span>';
-                    statusIndicator.className = "status-text status-active";
-                    if(player && player.playVideo) player.playVideo();
+                    updateStatusDisplay("PLAYING");
+                    if(player && player.playVideo) {
+                        isSystemAction = true; // システムによる操作フラグ
+                        player.playVideo();
+                    }
                 }
             } else {
+                // --- STOP ---
                 if (currentState !== "STOPPED") {
                     currentState = "STOPPED";
-                    statusIndicator.innerHTML = '<i class="fas fa-pause"></i> <span>STOP</span>';
-                    statusIndicator.className = "status-text status-inactive";
-                    if(player && player.pauseVideo) player.pauseVideo();
+                    updateStatusDisplay("STOPPED");
+                    if(player && player.pauseVideo) {
+                        isSystemAction = true; // システムによる操作フラグ
+                        player.pauseVideo();
+                    }
                 }
             }
 
