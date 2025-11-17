@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motion Gated Player - Cyber Edition</title>
+    <title>Motion Gated Player - Hybrid Edition</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --bg-color: #0a0a0a;
             --panel-color: #161616;
-            --accent-color: #00ff88; /* ネオングリーン */
-            --stop-color: #ff0055;   /* ネオンレッド */
+            --accent-color: #00e5ff; /* サイバーブルーに変更 */
+            --active-color: #00ff88;
+            --stop-color: #ff0055;
             --text-color: #e0e0e0;
         }
 
@@ -34,7 +35,7 @@
             text-align: center;
             margin-bottom: 10px;
         }
-        h1 { margin: 0; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-color); text-shadow: 0 0 10px rgba(0,255,136,0.3); }
+        h1 { margin: 0; font-size: 1.2rem; letter-spacing: 2px; text-transform: uppercase; color: var(--accent-color); text-shadow: 0 0 10px rgba(0,229,255,0.3); }
 
         /* --- メインコンテナ --- */
         .main-container {
@@ -64,8 +65,9 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            min-width: 100px;
         }
-        .status-active { color: var(--accent-color); text-shadow: 0 0 8px var(--accent-color); }
+        .status-active { color: var(--active-color); text-shadow: 0 0 8px var(--active-color); }
         .status-inactive { color: var(--stop-color); text-shadow: 0 0 8px var(--stop-color); }
 
         /* --- メーターUI --- */
@@ -80,9 +82,9 @@
         .meter-label { font-size: 0.7rem; color: #888; display: flex; justify-content: space-between; }
         
         .meter-track {
-            height: 12px;
+            height: 8px;
             background: #333;
-            border-radius: 6px;
+            border-radius: 4px;
             overflow: hidden;
             position: relative;
         }
@@ -90,7 +92,7 @@
             height: 100%;
             width: 0%;
             background: linear-gradient(90deg, var(--accent-color), #fff);
-            border-radius: 6px;
+            border-radius: 4px;
             box-shadow: 0 0 10px var(--accent-color);
             transition: width 0.1s linear;
         }
@@ -127,47 +129,45 @@
             margin-bottom: 15px;
             align-items: center;
         }
-        .panel-row:last-child { margin-bottom: 0; }
-
+        
         /* 入力フォーム */
-        .input-group {
-            flex: 1;
-            display: flex;
-            gap: 10px;
-        }
+        .input-group { flex: 1; display: flex; gap: 10px; }
         input[type="text"] {
-            flex: 1;
-            background: #222;
-            border: 1px solid #444;
-            color: #fff;
-            padding: 10px;
-            border-radius: 8px;
-            outline: none;
+            flex: 1; background: #222; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 8px; outline: none;
         }
         input[type="text"]:focus { border-color: var(--accent-color); }
 
         /* ボタン */
         button {
-            background: #333;
-            color: #fff;
-            border: 1px solid #444;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.2s;
+            background: #333; color: #fff; border: 1px solid #444; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: all 0.2s;
         }
         button:hover { background: #444; }
         button.primary { background: var(--accent-color); color: #000; border: none; }
-        button.primary:hover { background: #00cc6a; box-shadow: 0 0 15px rgba(0,255,136,0.4); }
+        button.primary:hover { background: #33eaff; box-shadow: 0 0 15px rgba(0,229,255,0.4); }
 
         button.start-btn {
             width: 100%; padding: 20px; font-size: 1.2rem;
-            background: linear-gradient(45deg, #ff5722, #ff9100);
-            color: white; border: none;
+            background: linear-gradient(45deg, var(--accent-color), #0091ea);
+            color: #000; border: none;
             animation: pulse 2s infinite;
         }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+
+        /* トグルスイッチ */
+        .toggle-container {
+            display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+            background: #222; padding: 8px 15px; border-radius: 20px; border: 1px solid #444;
+        }
+        .toggle-checkbox { display: none; }
+        .toggle-switch {
+            width: 40px; height: 20px; background: #555; border-radius: 20px; position: relative; transition: 0.3s;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: 0.3s;
+        }
+        .toggle-checkbox:checked + .toggle-switch { background: var(--accent-color); }
+        .toggle-checkbox:checked + .toggle-switch::after { transform: translateX(20px); }
+        .toggle-label { font-size: 0.9rem; color: #ccc; }
 
         /* スライダー周り */
         .slider-group { flex: 1; min-width: 200px; }
@@ -181,28 +181,27 @@
         }
         .tag:hover { border-color: var(--accent-color); color: var(--accent-color); }
 
-        /* 隠し要素 */
-        #hidden-process { position: absolute; top: -9999px; left: -9999px; visibility: hidden; }
+        #hidden-process { position: absolute; visibility: hidden; }
     </style>
 </head>
 <body>
 
     <header>
-        <h1><i class="fas fa-bolt"></i> Kinetic Stream</h1>
+        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v6</h1>
     </header>
 
     <div class="main-container">
         
-        <button id="startBtn" class="start-btn"><i class="fas fa-camera"></i> カメラを起動してスタート</button>
+        <button id="startBtn" class="start-btn"><i class="fas fa-power-off"></i> システム起動</button>
 
         <div class="status-bar">
             <div id="statusIndicator" class="status-text status-inactive">
-                <i class="fas fa-pause-circle"></i> <span>STOP</span>
+                <i class="fas fa-pause"></i> <span>STOP</span>
             </div>
             
             <div class="meter-wrapper" id="meterWrapper">
                 <div class="meter-label">
-                    <span>MOTION LEVEL</span>
+                    <span>ACTIVITY LEVEL</span>
                     <span id="meterValue">0%</span>
                 </div>
                 <div class="meter-track">
@@ -211,9 +210,7 @@
             </div>
 
             <div style="margin-left: 10px;">
-                <button onclick="toggleMeter()" style="padding: 5px 10px; font-size:0.8rem;" title="メーター表示/非表示">
-                    <i class="fas fa-eye"></i>
-                </button>
+                <button onclick="toggleMeter()" style="padding: 5px 10px;" title="メーター表示切替"><i class="fas fa-eye"></i></button>
             </div>
         </div>
 
@@ -222,35 +219,41 @@
         </div>
 
         <div class="control-panel">
+            <div class="panel-row" style="justify-content: center; padding-bottom: 15px; border-bottom: 1px solid #333;">
+                <label class="toggle-container" title="ONにすると、マウス移動やキーボード入力も「動き」として検知します">
+                    <input type="checkbox" id="pcInputToggle" class="toggle-checkbox" checked>
+                    <div class="toggle-switch"></div>
+                    <span class="toggle-label"><i class="fas fa-keyboard"></i> PC操作も検知に含める (作業用)</span>
+                </label>
+            </div>
+
             <div class="panel-row">
                 <div class="input-group">
-                    <input type="text" id="videoUrl" placeholder="YouTubeのURLを貼り付け (例: https://youtu.be/xxx)">
+                    <input type="text" id="videoUrl" placeholder="YouTube URL貼り付け">
                     <button class="primary" onclick="loadFromUrl()">再生</button>
                 </div>
-                <button onclick="openYouTubeSearch()"><i class="fab fa-youtube"></i> 動画を探す</button>
+                <button onclick="openYouTubeSearch()"><i class="fab fa-youtube"></i> 検索</button>
             </div>
 
             <div class="panel-row" style="display: block;">
-                <div style="font-size: 0.8rem; color: #888; margin-bottom: 8px;">おすすめプリセット:</div>
+                <div style="font-size: 0.8rem; color: #888; margin-bottom: 8px;">プリセット:</div>
                 <div class="preset-tags">
                     <div class="tag" onclick="setVideo('jfKfPfyJRdk')">Lo-Fi HipHop</div>
-                    <div class="tag" onclick="setVideo('5qap5aO4i9A')">Lofi Girl (Synthwave)</div>
-                    <div class="tag" onclick="setVideo('lTRiuFIWV54')">激しいメタル</div>
-                    <div class="tag" onclick="setVideo('teIjhVd9jFk')">EDM Workout</div>
-                    <div class="tag" onclick="setVideo('gDnE-5lD7w8')">自然の風景</div>
+                    <div class="tag" onclick="setVideo('5qap5aO4i9A')">Synthwave</div>
+                    <div class="tag" onclick="setVideo('lTRiuFIWV54')">Metal</div>
+                    <div class="tag" onclick="setVideo('teIjhVd9jFk')">Workout</div>
+                    <div class="tag" onclick="setVideo('gDnE-5lD7w8')">Nature</div>
                 </div>
             </div>
 
-            <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
-
             <div class="panel-row">
                 <div class="slider-group">
-                    <div class="slider-label"><span>感度 (左:高感度 ⇔ 右:低感度)</span> <span id="sensVal">50</span></div>
+                    <div class="slider-label"><span>カメラ感度 (高⇔低)</span> <span id="sensVal">50</span></div>
                     <input type="range" id="sensitivity" min="10" max="150" value="50">
                 </div>
                 <div class="slider-group">
                     <div class="slider-label"><span>停止までの余韻 (秒)</span> <span id="decayVal">2.0s</span></div>
-                    <input type="range" id="decay" min="0.2" max="5.0" value="2.0" step="0.1">
+                    <input type="range" id="decay" min="0.5" max="10.0" value="2.0" step="0.5">
                 </div>
             </div>
         </div>
@@ -262,7 +265,7 @@
     </div>
 
     <script>
-        // --- 1. YouTube API ---
+        // --- YouTube API ---
         let player;
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
@@ -276,39 +279,23 @@
             });
         }
 
-        // 動画ロード関数
         function loadFromUrl() {
             const url = document.getElementById('videoUrl').value;
             let vid = extractVideoID(url);
-            if(vid) {
-                if(player && player.loadVideoById) player.loadVideoById(vid);
-            } else {
-                alert("URLから動画IDを認識できませんでした。\n正しいYouTubeのURLか確認してください。");
-            }
+            if(vid && player && player.loadVideoById) player.loadVideoById(vid);
         }
-
         function setVideo(id) {
             if(player && player.loadVideoById) player.loadVideoById(id);
             document.getElementById('videoUrl').value = "https://youtu.be/" + id;
         }
-
-        function openYouTubeSearch() {
-            window.open("https://www.youtube.com", "_blank");
-        }
-
+        function openYouTubeSearch() { window.open("https://www.youtube.com", "_blank"); }
         function extractVideoID(url) {
-            let videoId = null;
-            if (url.includes('v=')) {
-                videoId = url.split('v=')[1].split('&')[0];
-            } else if (url.includes('youtu.be/')) {
-                videoId = url.split('youtu.be/')[1].split('?')[0];
-            } else if (url.length === 11) {
-                videoId = url; // ID直接入力の場合
-            }
-            return videoId;
+            if (url.includes('v=')) return url.split('v=')[1].split('&')[0];
+            if (url.includes('youtu.be/')) return url.split('youtu.be/')[1].split('?')[0];
+            return url.length === 11 ? url : null;
         }
 
-        // --- 2. UI & Motion Logic ---
+        // --- Logic ---
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('diff-canvas');
         const ctx = canvas.getContext('2d');
@@ -325,118 +312,114 @@
         const decayInput = document.getElementById('decay');
         const sensValDisp = document.getElementById('sensVal');
         const decayValDisp = document.getElementById('decayVal');
+        const pcInputToggle = document.getElementById('pcInputToggle');
 
         sensInput.addEventListener('input', (e) => sensValDisp.innerText = e.target.value);
         decayInput.addEventListener('input', (e) => decayValDisp.innerText = e.target.value + "s");
 
-        // 状態変数
         let lastImageData = null;
         let lastActiveTime = 0; 
         let isRunning = false;
         let currentState = "STOPPED"; 
         let isMeterVisible = true;
+        let pcInputDetectedFrame = false; // 今のフレームでPC操作があったか
 
-        // メーター切替
+        // --- PC Input Listeners ---
+        function onPcInput() {
+            if (!isRunning || !pcInputToggle.checked) return;
+            lastActiveTime = Date.now();
+            pcInputDetectedFrame = true;
+        }
+        // マウス移動とキー操作を監視
+        document.addEventListener('mousemove', onPcInput);
+        document.addEventListener('keydown', onPcInput);
+        document.addEventListener('click', onPcInput);
+        document.addEventListener('scroll', onPcInput);
+
+
         function toggleMeter() {
             isMeterVisible = !isMeterVisible;
-            if(isMeterVisible) {
-                meterWrapper.classList.remove('meter-hidden');
-            } else {
-                meterWrapper.classList.add('meter-hidden');
-            }
+            meterWrapper.classList.toggle('meter-hidden', !isMeterVisible);
         }
 
-        // スタート処理
         startBtn.addEventListener('click', async () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
                 video.srcObject = stream;
-                
-                // ★重要: ここで確実に再生を開始させる
-                video.onloadedmetadata = () => {
-                    video.play();
-                };
+                video.onloadedmetadata = () => { video.play(); };
 
-                // 自動再生制限解除の儀式
                 if(player && player.playVideo) {
-                    player.mute(); 
-                    player.playVideo();
-                    setTimeout(() => {
-                        player.pauseVideo();
-                        player.unMute();
-                    }, 500);
+                    player.mute(); player.playVideo();
+                    setTimeout(() => { player.pauseVideo(); player.unMute(); }, 500);
                 }
 
                 startBtn.style.display = 'none';
                 isRunning = true;
                 loop();
             } catch(e) {
-                alert("カメラエラー: " + e.name + "\nブラウザの設定でカメラを許可してください。");
+                alert("カメラの起動に失敗しました。");
             }
         });
 
         function loop() {
             if(!isRunning) return;
 
-            // 映像処理
-            // videoが準備できていない場合のエラー回避
+            let score = 0;
+
+            // 1. カメラ処理
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 const data = frame.data;
-                let score = 0;
-
+                
                 if (lastImageData) {
                     const lastData = lastImageData.data;
-                    // 負荷軽減のためスキップスキャン (20ピクセルおき)
                     for (let i = 0; i < data.length; i += 4 * 20) {
-                        const r = Math.abs(data[i] - lastData[i]);
-                        const g = Math.abs(data[i+1] - lastData[i+1]);
-                        const b = Math.abs(data[i+2] - lastData[i+2]);
-                        // ノイズ除去のための最小変化量
-                        if (r + g + b > 40) score++;
+                        const diff = Math.abs(data[i] - lastData[i]) + Math.abs(data[i+1] - lastData[i+1]) + Math.abs(data[i+2] - lastData[i+2]);
+                        if (diff > 40) score++;
                     }
                 }
                 lastImageData = frame;
+            }
 
-                // UI更新 (メーター)
-                const displayScore = Math.min(100, score / 3); // スケール調整
-                if (isMeterVisible) {
-                    motionBar.style.width = displayScore + "%";
-                    meterValue.innerText = Math.floor(displayScore) + "%";
+            // 2. カメラ検知判定
+            const threshold = parseInt(sensInput.value);
+            if (score > (threshold / 2)) {
+                lastActiveTime = Date.now();
+            }
+
+            // 3. メーター表示の計算 (PC操作があれば強制MAX)
+            let displayScore = Math.min(100, score / 3);
+            if (pcInputDetectedFrame) {
+                displayScore = 100; // PC操作時はメーター振り切れ
+                pcInputDetectedFrame = false; // フラグリセット
+            }
+
+            if (isMeterVisible) {
+                motionBar.style.width = displayScore + "%";
+                meterValue.innerText = Math.floor(displayScore) + "%";
+                // メーターの色変化
+                if(displayScore > 80) motionBar.style.background = "var(--active-color)";
+                else motionBar.style.background = "linear-gradient(90deg, var(--accent-color), #fff)";
+            }
+
+            // 4. 再生/停止判定
+            const now = Date.now();
+            const decayMs = parseFloat(decayInput.value) * 1000;
+            
+            if (now < lastActiveTime + decayMs) {
+                if (currentState !== "PLAYING") {
+                    currentState = "PLAYING";
+                    statusIndicator.innerHTML = '<i class="fas fa-play"></i> <span>ACTIVE</span>';
+                    statusIndicator.className = "status-text status-active";
+                    if(player && player.playVideo) player.playVideo();
                 }
-
-                // 判定ロジック
-                const threshold = parseInt(sensInput.value); // 感度
-                const now = Date.now();
-
-                // 閾値を超えたら「動いた時刻」を更新
-                // ★修正: 感度スライダーのロジックを直感的に (左=敏感=低い閾値 / 右=鈍感=高い閾値)
-                // scoreは動きの量。thresholdは「必要な動きの量」。
-                // score > threshold ならOK。
-                if (score > (threshold / 2)) { // 調整係数
-                    lastActiveTime = now;
-                }
-
-                const decayMs = parseFloat(decayInput.value) * 1000;
-                const timeDiff = now - lastActiveTime;
-
-                if (timeDiff < decayMs) {
-                    // --- 再生 ---
-                    if (currentState !== "PLAYING") {
-                        currentState = "PLAYING";
-                        statusIndicator.innerHTML = '<i class="fas fa-play-circle"></i> <span>ACTIVE</span>';
-                        statusIndicator.className = "status-text status-active";
-                        if(player && player.playVideo) player.playVideo();
-                    }
-                } else {
-                    // --- 停止 ---
-                    if (currentState !== "STOPPED") {
-                        currentState = "STOPPED";
-                        statusIndicator.innerHTML = '<i class="fas fa-pause-circle"></i> <span>STOP</span>';
-                        statusIndicator.className = "status-text status-inactive";
-                        if(player && player.pauseVideo) player.pauseVideo();
-                    }
+            } else {
+                if (currentState !== "STOPPED") {
+                    currentState = "STOPPED";
+                    statusIndicator.innerHTML = '<i class="fas fa-pause"></i> <span>STOP</span>';
+                    statusIndicator.className = "status-text status-inactive";
+                    if(player && player.pauseVideo) player.pauseVideo();
                 }
             }
 
