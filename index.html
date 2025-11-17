@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motion Gated Player - v8 Persistence</title>
+    <title>Motion Gated Player - v9 Resume</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -195,7 +195,7 @@
 <body>
 
     <header>
-        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v8</h1>
+        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v9</h1>
     </header>
 
     <div class="main-container">
@@ -252,16 +252,7 @@
                 <button onclick="openYouTubeSearch()"><i class="fab fa-youtube"></i> 検索</button>
             </div>
 
-            <div class="panel-row" style="display: block;">
-                <div style="font-size: 0.8rem; color: #888; margin-bottom: 8px;">プリセット:</div>
-                <div class="preset-tags">
-                    <div class="tag" onclick="setVideo('jfKfPfyJRdk')">Lo-Fi HipHop</div>
-                    <div class="tag" onclick="setVideo('5qap5aO4i9A')">Synthwave</div>
-                    <div class="tag" onclick="setVideo('lTRiuFIWV54')">Metal</div>
-                    <div class="tag" onclick="setVideo('teIjhVd9jFk')">Workout</div>
-                    <div class="tag" onclick="setVideo('gDnE-5lD7w8')">Nature</div>
-                </div>
-            </div>
+           
 
             <div class="panel-row">
                 <div class="slider-group">
@@ -282,6 +273,9 @@
     </div>
 
     <script>
+        // --- Storage Key Constants ---
+        const STORAGE_PREFIX = "motionGated_";
+
         // --- YouTube API Setup ---
         let player;
         const tag = document.createElement('script');
@@ -290,14 +284,44 @@
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
         function onYouTubeIframeAPIReady() {
+            // ロード時に保存されたIDと時間を取得
+            const savedVideoId = localStorage.getItem(STORAGE_PREFIX + "videoId") || 'jfKfPfyJRdk';
+            const savedTime = parseFloat(localStorage.getItem(STORAGE_PREFIX + "currentTime")) || 0;
+            
+            // URL入力欄にも反映
+            document.getElementById('videoUrl').value = "https://youtu.be/" + savedVideoId;
+
             player = new YT.Player('player', {
-                videoId: 'jfKfPfyJRdk',
-                playerVars: { 'playsinline': 1, 'rel': 0 },
+                videoId: savedVideoId,
+                playerVars: { 
+                    'playsinline': 1, 
+                    'rel': 0,
+                    'start': Math.floor(savedTime) // 続きから開始
+                },
                 events: {
                     'onStateChange': onPlayerStateChange
                 }
             });
         }
+
+        // --- 動画状態の定期保存 ---
+        // 1秒ごとに現在の動画IDと時間を保存
+        setInterval(() => {
+            if(player && typeof player.getCurrentTime === 'function' && typeof player.getVideoData === 'function') {
+                // プレイヤーが正常に動いている時のみ
+                try {
+                    const time = player.getCurrentTime();
+                    const data = player.getVideoData();
+                    if(data && data.video_id) {
+                        localStorage.setItem(STORAGE_PREFIX + "videoId", data.video_id);
+                        localStorage.setItem(STORAGE_PREFIX + "currentTime", time);
+                    }
+                } catch(e) {
+                    // プレイヤー読み込み前などのエラーは無視
+                }
+            }
+        }, 1000);
+
 
         // --- 手動停止管理ロジック ---
         let isManuallyPaused = false;
@@ -322,6 +346,7 @@
             const url = document.getElementById('videoUrl').value;
             let vid = extractVideoID(url);
             if(vid && player && player.loadVideoById) {
+                // 新しい動画を読み込む時は0秒から
                 player.loadVideoById(vid);
                 isManuallyPaused = false;
             }
@@ -362,8 +387,6 @@
         const detectionToggle = document.getElementById('detectionToggle');
 
         // --- 設定保存・読込機能 (Persistence) ---
-        const STORAGE_PREFIX = "motionGated_";
-
         function saveSettings() {
             localStorage.setItem(STORAGE_PREFIX + "sensitivity", sensInput.value);
             localStorage.setItem(STORAGE_PREFIX + "decay", decayInput.value);
@@ -402,16 +425,12 @@
             }
         }
 
-        // UIリスナーに保存処理を追加
-        sensInput.addEventListener('input', (e) => {
-            sensValDisp.innerText = e.target.value;
-        });
-        sensInput.addEventListener('change', saveSettings); // 値確定時に保存
+        // UIリスナー
+        sensInput.addEventListener('input', (e) => { sensValDisp.innerText = e.target.value; });
+        sensInput.addEventListener('change', saveSettings); 
 
-        decayInput.addEventListener('input', (e) => {
-            decayValDisp.innerText = e.target.value + "s";
-        });
-        decayInput.addEventListener('change', saveSettings); // 値確定時に保存
+        decayInput.addEventListener('input', (e) => { decayValDisp.innerText = e.target.value + "s"; });
+        decayInput.addEventListener('change', saveSettings); 
 
         pcInputToggle.addEventListener('change', saveSettings);
         detectionToggle.addEventListener('change', saveSettings);
@@ -434,11 +453,11 @@
         }
         ['mousemove', 'keydown', 'click', 'scroll'].forEach(ev => document.addEventListener(ev, onPcInput));
 
-        // メーター表示切替（アイコン変化） & 保存
+        // メーター表示切替
         function toggleMeter() {
             isMeterVisible = !isMeterVisible;
             updateMeterVisibilityUI();
-            saveSettings(); // 変更したら保存
+            saveSettings();
         }
 
         function updateMeterVisibilityUI() {
@@ -528,7 +547,6 @@
             const now = Date.now();
             const decayMs = parseFloat(decayInput.value) * 1000;
 
-            // 手動停止中は、何があっても再生しない
             if (isManuallyPaused) {
                 if (currentState !== "MANUAL PAUSE") {
                     currentState = "MANUAL PAUSE";
@@ -538,7 +556,6 @@
                 return;
             }
 
-            // 検知OFFなら何もしない
             if (!detectionToggle.checked) {
                  if (currentState !== "STOPPED" && currentState !== "PLAYING") {
                      updateStatusDisplay("STOPPED"); 
@@ -547,7 +564,6 @@
                  return;
             }
 
-            // 自動制御
             if (now < lastActiveTime + decayMs) {
                 if (currentState !== "PLAYING") {
                     currentState = "PLAYING";
