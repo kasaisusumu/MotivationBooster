@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motion Gated Player - v11 Light</title>
+    <title>Motion Gated Player - v12 Final</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -201,7 +201,7 @@
 <body>
 
     <header>
-        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v11</h1>
+        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v12</h1>
         <p class="site-desc">動きを感知して動画を再生・停止。作業に取り掛かる・投げ出さないための「動かないと見られない」動画プレイヤー。</p>
     </header>
 
@@ -244,14 +244,14 @@
                     <span class="toggle-label">動き検知 ON</span>
                 </label>
 
-                <label class="toggle-container" title="マウスやキーボード操作も動きとしてカウントします">
+                <label id="pcInputContainer" class="toggle-container" title="マウスやキーボード操作も動きとしてカウントします" style="display:none;">
                     <input type="checkbox" id="pcInputToggle" class="toggle-checkbox" checked>
                     <div class="toggle-switch"></div>
                     <span class="toggle-label">PC操作検知</span>
                 </label>
 
-                <button onclick="switchCamera()" style="padding: 5px 10px; font-size: 0.8rem;">
-                    <i class="fas fa-sync"></i> カメラ切替
+                <button id="cameraSwitchBtn" onclick="switchCamera()" style="padding: 5px 15px; font-size: 0.85rem; display:none; border-radius:20px; align-items:center; gap:8px;">
+                    <i id="camIcon" class="fas fa-user"></i> <span id="camText">インカメラ</span>
                 </button>
             </div>
 
@@ -286,6 +286,9 @@
     <script>
         const STORAGE_PREFIX = "motionGated_";
 
+        // --- Device Detection ---
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
         // --- YouTube API Setup ---
         let player;
         const tag = document.createElement('script');
@@ -306,7 +309,6 @@
             });
         }
 
-        // 定期保存 (1秒おき)
         setInterval(() => {
             if(player && typeof player.getCurrentTime === 'function' && typeof player.getVideoData === 'function') {
                 try {
@@ -320,7 +322,6 @@
             }
         }, 1000);
 
-        // --- 状態管理 ---
         let isManuallyPaused = false;
         let isSystemAction = false;
 
@@ -338,7 +339,6 @@
             }
         }
 
-        // --- 動画操作 ---
         function loadFromUrl() {
             const url = document.getElementById('videoUrl').value;
             let vid = extractVideoID(url);
@@ -361,7 +361,7 @@
             return url.length === 11 ? url : null;
         }
 
-        // --- カメラ & メイン処理 ---
+        // --- Main Logic ---
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('diff-canvas');
         const ctx = canvas.getContext('2d');
@@ -380,8 +380,25 @@
         const pcInputToggle = document.getElementById('pcInputToggle');
         const detectionToggle = document.getElementById('detectionToggle');
 
+        // Device Specific Elements
+        const pcInputContainer = document.getElementById('pcInputContainer');
+        const cameraSwitchBtn = document.getElementById('cameraSwitchBtn');
+        const camIcon = document.getElementById('camIcon');
+        const camText = document.getElementById('camText');
+
         let currentStream = null;
-        let currentFacingMode = 'user';
+        let currentFacingMode = 'user'; // user=Inner, environment=Outer
+
+        // --- UI Initialization based on Device ---
+        if (isMobile) {
+            // Mobile: Show Camera Switch, Hide PC Input
+            pcInputContainer.style.display = 'none';
+            cameraSwitchBtn.style.display = 'inline-flex';
+        } else {
+            // PC: Hide Camera Switch, Show PC Input
+            pcInputContainer.style.display = 'flex';
+            cameraSwitchBtn.style.display = 'none';
+        }
 
         function saveSettings() {
             localStorage.setItem(STORAGE_PREFIX + "sensitivity", sensInput.value);
@@ -420,7 +437,7 @@
         let currentState = "STOPPED"; 
         let isMeterVisible = true;
         let pcInputDetectedFrame = false;
-        let lastLoopTime = 0; // 負荷軽減用: 最後に処理した時間
+        let lastLoopTime = 0;
 
         loadSettings();
 
@@ -429,7 +446,11 @@
             lastActiveTime = Date.now();
             pcInputDetectedFrame = true;
         }
-        ['mousemove', 'keydown', 'click', 'scroll'].forEach(ev => document.addEventListener(ev, onPcInput));
+
+        // Only attach PC listeners if NOT mobile
+        if (!isMobile) {
+            ['mousemove', 'keydown', 'click', 'scroll'].forEach(ev => document.addEventListener(ev, onPcInput));
+        }
 
         function toggleMeter() {
             isMeterVisible = !isMeterVisible;
@@ -463,6 +484,16 @@
             }
         }
 
+        function updateCameraUI() {
+            if (currentFacingMode === 'user') {
+                camIcon.className = "fas fa-user";
+                camText.innerText = "インカメラ";
+            } else {
+                camIcon.className = "fas fa-mountain"; // アウトカメラ用アイコン
+                camText.innerText = "アウトカメラ";
+            }
+        }
+
         async function startCamera(facingMode) {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
@@ -475,6 +506,10 @@
                 currentStream = stream;
                 video.srcObject = stream;
                 video.onloadedmetadata = () => { video.play(); };
+                
+                // Update UI text
+                updateCameraUI();
+
             } catch (err) {
                 alert("カメラエラー: " + err);
             }
@@ -501,10 +536,9 @@
         function loop() {
             if(!isRunning) return;
 
-            requestAnimationFrame(loop); // 次のループを予約
+            requestAnimationFrame(loop);
 
             const now = Date.now();
-            // ★負荷軽減処理: 150ms経過していないなら計算をスキップ (約6-7 FPS)
             if (now - lastLoopTime < 150) {
                 return;
             }
@@ -512,7 +546,6 @@
 
             let score = 0;
             
-            // 検知OFFなら計算スキップしてスコア0
             if (detectionToggle.checked) {
                 if (video.readyState === video.HAVE_ENOUGH_DATA) {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -521,7 +554,6 @@
                     
                     if (lastImageData) {
                         const lastData = lastImageData.data;
-                        // さらに間引きを増やす (32px飛び)
                         for (let i = 0; i < data.length; i += 4 * 32) {
                             const diff = Math.abs(data[i] - lastData[i]) + Math.abs(data[i+1] - lastData[i+1]) + Math.abs(data[i+2] - lastData[i+2]);
                             if (diff > 40) score++;
@@ -530,15 +562,13 @@
                     lastImageData = frame;
                 }
 
-                // スコアも少し低めに出るため閾値を補正
                 const threshold = Math.max(1, parseInt(sensInput.value) / 5); 
                 if (score > threshold) {
                     lastActiveTime = Date.now();
                 }
             }
 
-            // メーター更新
-            let displayScore = Math.min(100, score * 2); // 表示用にスケールアップ
+            let displayScore = Math.min(100, score * 2);
             if (pcInputDetectedFrame) { displayScore = 100; pcInputDetectedFrame = false; }
 
             if (!detectionToggle.checked) {
@@ -552,7 +582,6 @@
                 else motionBar.style.background = "linear-gradient(90deg, var(--accent-color), #fff)";
             }
 
-            // 再生制御
             const decayMs = parseFloat(decayInput.value) * 1000;
 
             if (isManuallyPaused) {
