@@ -9,7 +9,6 @@
     <meta property="og:title" content="Motion Gated Player">
     <meta property="og:description" content="動きを感知して動画を再生・停止。作業に取り掛かる・投げ出さないための「動かないと見られない」動画プレイヤー。">
     <meta property="og:type" content="website">
-
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -195,6 +194,7 @@
         .slider-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 5px; color: #aaa; }
         input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--accent-color); }
 
+        .preset-tags { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
         .tag {
             font-size: 0.8rem; padding: 5px 12px; background: #333; border-radius: 20px; cursor: pointer; white-space: nowrap; border: 1px solid transparent;
         }
@@ -206,7 +206,7 @@
 <body>
 
     <header>
-        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v19</h1>
+        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v13</h1>
         <p class="site-desc">動きを感知して動画を再生・停止。作業に取り掛かる・投げ出さないための「動かないと見られない」動画プレイヤー。</p>
     </header>
 
@@ -268,14 +268,16 @@
                 <button onclick="openYouTubeSearch()"><i class="fab fa-youtube"></i> 検索</button>
             </div>
 
+            
+
             <div class="panel-row">
                 <div class="slider-group">
-                    <div class="slider-label"><span>カメラ感度 (左:敏感 ⇔ 右:激鈍)</span> <span id="sensVal">5000</span></div>
-                    <input type="range" id="sensitivity" min="500" max="30000" value="5000">
+                    <div class="slider-label"><span>カメラ感度</span> <span id="sensVal">50</span></div>
+                    <input type="range" id="sensitivity" min="10" max="150" value="50">
                 </div>
                 <div class="slider-group">
                     <div class="slider-label"><span>停止までの余韻 (秒)</span> <span id="decayVal">10.0s</span></div>
-                    <input type="range" id="decay" min="0.5" max="30.0" value="10.0" step="0.5">
+                    <input type="range" id="decay" min="0.5" max="10.0" value="10.0" step="0.5">
                 </div>
             </div>
         </div>
@@ -288,6 +290,8 @@
 
     <script>
         const STORAGE_PREFIX = "motionGated_";
+
+        // --- Device Detection ---
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         // --- YouTube API Setup ---
@@ -381,18 +385,22 @@
         const pcInputToggle = document.getElementById('pcInputToggle');
         const detectionToggle = document.getElementById('detectionToggle');
 
+        // Device Specific Elements
         const pcInputContainer = document.getElementById('pcInputContainer');
         const cameraSwitchBtn = document.getElementById('cameraSwitchBtn');
         const camIcon = document.getElementById('camIcon');
         const camText = document.getElementById('camText');
 
         let currentStream = null;
-        let currentFacingMode = 'user';
+        let currentFacingMode = 'user'; // user=Inner, environment=Outer
 
+        // --- UI Initialization based on Device ---
         if (isMobile) {
+            // Mobile: Show Camera Switch, Hide PC Input
             pcInputContainer.style.display = 'none';
             cameraSwitchBtn.style.display = 'inline-flex';
         } else {
+            // PC: Hide Camera Switch, Show PC Input
             pcInputContainer.style.display = 'flex';
             cameraSwitchBtn.style.display = 'none';
         }
@@ -435,7 +443,6 @@
         let isMeterVisible = true;
         let pcInputDetectedFrame = false;
         let lastLoopTime = 0;
-        let currentDisplayScore = 0;
 
         loadSettings();
 
@@ -445,13 +452,9 @@
             pcInputDetectedFrame = true;
         }
 
-        // --- 監視イベントの強化 ---
+        // Only attach PC listeners if NOT mobile
         if (!isMobile) {
-            // window全体とdocument全体に対して監視
-            ['mousemove', 'keydown', 'click', 'scroll', 'mousedown', 'wheel', 'visibilitychange', 'focus'].forEach(ev => {
-                window.addEventListener(ev, onPcInput, true); // true: capture phaseで確実に拾う
-                document.addEventListener(ev, onPcInput, true);
-            });
+            ['mousemove', 'keydown', 'click', 'scroll'].forEach(ev => document.addEventListener(ev, onPcInput));
         }
 
         function toggleMeter() {
@@ -491,7 +494,7 @@
                 camIcon.className = "fas fa-user";
                 camText.innerText = "インカメラ";
             } else {
-                camIcon.className = "fas fa-mountain";
+                camIcon.className = "fas fa-mountain"; // アウトカメラ用アイコン
                 camText.innerText = "アウトカメラ";
             }
         }
@@ -508,7 +511,10 @@
                 currentStream = stream;
                 video.srcObject = stream;
                 video.onloadedmetadata = () => { video.play(); };
+                
+                // Update UI text
                 updateCameraUI();
+
             } catch (err) {
                 alert("カメラエラー: " + err);
             }
@@ -521,10 +527,12 @@
 
         startBtn.addEventListener('click', async () => {
             await startCamera(currentFacingMode);
+            
             if(player && player.playVideo) {
                 player.mute(); player.playVideo();
                 setTimeout(() => { player.pauseVideo(); player.unMute(); }, 500);
             }
+
             startBtn.style.display = 'none';
             isRunning = true;
             loop();
@@ -532,50 +540,50 @@
 
         function loop() {
             if(!isRunning) return;
+
             requestAnimationFrame(loop);
 
             const now = Date.now();
+            if (now - lastLoopTime < 150) {
+                return;
+            }
+            lastLoopTime = now;
 
-            // --- 1. Camera Processing ---
-            if (now - lastLoopTime > 150) {
-                lastLoopTime = now;
-                
-                let score = 0;
-                if (detectionToggle.checked) {
-                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                        const data = frame.data;
-                        
-                        if (lastImageData) {
-                            const lastData = lastImageData.data;
-                            for (let i = 0; i < data.length; i += 4 * 32) {
-                                const diff = Math.abs(data[i] - lastData[i]) + Math.abs(data[i+1] - lastData[i+1]) + Math.abs(data[i+2] - lastData[i+2]);
-                                if (diff > 120) score++;
-                            }
+            let score = 0;
+            
+            if (detectionToggle.checked) {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = frame.data;
+                    
+                    if (lastImageData) {
+                        const lastData = lastImageData.data;
+                        for (let i = 0; i < data.length; i += 4 * 32) {
+                            const diff = Math.abs(data[i] - lastData[i]) + Math.abs(data[i+1] - lastData[i+1]) + Math.abs(data[i+2] - lastData[i+2]);
+                            if (diff > 40) score++;
                         }
-                        lastImageData = frame;
                     }
-                    const threshold = parseInt(sensInput.value); 
-                    if (score > threshold) {
-                        lastActiveTime = now;
-                    }
+                    lastImageData = frame;
                 }
-                currentDisplayScore = Math.min(100, score / 3);
+
+                const threshold = Math.max(1, parseInt(sensInput.value) / 5); 
+                if (score > threshold) {
+                    lastActiveTime = Date.now();
+                }
             }
 
-            // --- 2. PC Input Handling ---
-            if (pcInputDetectedFrame) { 
-                currentDisplayScore = 100; 
-                pcInputDetectedFrame = false; 
-            }
+            let displayScore = Math.min(100, score * 2);
+            if (pcInputDetectedFrame) { displayScore = 100; pcInputDetectedFrame = false; }
 
-            if (!detectionToggle.checked) currentDisplayScore = 0;
+            if (!detectionToggle.checked) {
+                displayScore = 0;
+            }
 
             if (isMeterVisible) {
-                motionBar.style.width = currentDisplayScore + "%";
-                meterValue.innerText = Math.floor(currentDisplayScore) + "%";
-                if(currentDisplayScore > 80) motionBar.style.background = "var(--active-color)";
+                motionBar.style.width = displayScore + "%";
+                meterValue.innerText = Math.floor(displayScore) + "%";
+                if(displayScore > 80) motionBar.style.background = "var(--active-color)";
                 else motionBar.style.background = "linear-gradient(90deg, var(--accent-color), #fff)";
             }
 
@@ -603,8 +611,6 @@
                     updateStatusDisplay("PLAYING");
                     if(player && player.playVideo) {
                         isSystemAction = true;
-                        if (player.unMute) player.unMute();
-                        if (player.setVolume) player.setVolume(100); 
                         player.playVideo();
                     }
                 }
