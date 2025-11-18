@@ -206,7 +206,7 @@
 <body>
 
     <header>
-        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v18</h1>
+        <h1><i class="fas fa-network-wired"></i> Kinetic Stream v19</h1>
         <p class="site-desc">動きを感知して動画を再生・停止。作業に取り掛かる・投げ出さないための「動かないと見られない」動画プレイヤー。</p>
     </header>
 
@@ -275,7 +275,7 @@
                 </div>
                 <div class="slider-group">
                     <div class="slider-label"><span>停止までの余韻 (秒)</span> <span id="decayVal">10.0s</span></div>
-                    <input type="range" id="decay" min="0.5" max="10.0" value="10.0" step="0.5">
+                    <input type="range" id="decay" min="0.5" max="30.0" value="10.0" step="0.5">
                 </div>
             </div>
         </div>
@@ -441,14 +441,17 @@
 
         function onPcInput() {
             if (!isRunning || !pcInputToggle.checked || !detectionToggle.checked) return;
-            // ★PC動作検知：ここで即座に時間を更新＝最高感度（スライダー無視・固定）
             lastActiveTime = Date.now();
             pcInputDetectedFrame = true;
         }
 
-        // ★イベント監視対象を追加：クリック、スクロール、キーボードに加え、mousedownやwheelも監視
+        // --- 監視イベントの強化 ---
         if (!isMobile) {
-            ['mousemove', 'keydown', 'click', 'scroll', 'mousedown', 'wheel'].forEach(ev => document.addEventListener(ev, onPcInput));
+            // window全体とdocument全体に対して監視
+            ['mousemove', 'keydown', 'click', 'scroll', 'mousedown', 'wheel', 'visibilitychange', 'focus'].forEach(ev => {
+                window.addEventListener(ev, onPcInput, true); // true: capture phaseで確実に拾う
+                document.addEventListener(ev, onPcInput, true);
+            });
         }
 
         function toggleMeter() {
@@ -533,7 +536,7 @@
 
             const now = Date.now();
 
-            // --- 1. Camera Processing (throttled) ---
+            // --- 1. Camera Processing ---
             if (now - lastLoopTime > 150) {
                 lastLoopTime = now;
                 
@@ -548,13 +551,11 @@
                             const lastData = lastImageData.data;
                             for (let i = 0; i < data.length; i += 4 * 32) {
                                 const diff = Math.abs(data[i] - lastData[i]) + Math.abs(data[i+1] - lastData[i+1]) + Math.abs(data[i+2] - lastData[i+2]);
-                                // ノイズ除去
                                 if (diff > 120) score++;
                             }
                         }
                         lastImageData = frame;
                     }
-                    // ★カメラ感度のみスライダーの影響を受ける (PC検知は無関係)
                     const threshold = parseInt(sensInput.value); 
                     if (score > threshold) {
                         lastActiveTime = now;
@@ -565,7 +566,6 @@
 
             // --- 2. PC Input Handling ---
             if (pcInputDetectedFrame) { 
-                // PC操作時はメーターMAX
                 currentDisplayScore = 100; 
                 pcInputDetectedFrame = false; 
             }
@@ -603,7 +603,6 @@
                     updateStatusDisplay("PLAYING");
                     if(player && player.playVideo) {
                         isSystemAction = true;
-                        // 音声トラブル対策
                         if (player.unMute) player.unMute();
                         if (player.setVolume) player.setVolume(100); 
                         player.playVideo();
